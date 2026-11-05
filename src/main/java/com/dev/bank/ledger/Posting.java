@@ -64,7 +64,8 @@ public class Posting  implements Persistable<UUID> {
 
     }
 
-    public static Posting of(JournalEntry journalEntry, Account account, Money amount){
+    // package-private: only JournalEntry.post(...) builds postings, after checking the balance
+    static Posting of(JournalEntry journalEntry, Account account, Money amount){
 
         Objects.requireNonNull(account, "account cannot be null");
         Objects.requireNonNull(journalEntry, "journalEntry cannot be null");

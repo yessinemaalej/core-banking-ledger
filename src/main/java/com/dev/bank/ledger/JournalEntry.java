@@ -92,7 +92,8 @@ public class JournalEntry implements Persistable<UUID> {
         this.createdBy = createdBy;
     }
 
-    public static JournalEntry transfer(LocalDate businessDate, LocalDate valueDate, String createdBy, String idempotencyKey, String correlationId){
+    // package-private: outside ledger/, entries are created only through post(...), which checks the balance
+    static JournalEntry transfer(LocalDate businessDate, LocalDate valueDate, String createdBy, String idempotencyKey, String correlationId){
         Objects.requireNonNull(businessDate, "businessDate is required for a transfer");
         Objects.requireNonNull(createdBy, "createdBy is required for a transfer");
         Objects.requireNonNull(valueDate, "valueDate is required for a transfer");
@@ -130,7 +131,17 @@ public class JournalEntry implements Persistable<UUID> {
         
     }
 
+    public static PostedEntry post(LocalDate businessDate, LocalDate valueDate, String createdBy,
+                                   String idempotencyKey, String correlationId, List<PostingLine> lines) {
+        Objects.requireNonNull(lines, "lines are required");
+        requireBalanced(lines.stream().map(PostingLine::amount).toList());
 
-
-
+        JournalEntry entry = transfer(businessDate, valueDate, createdBy, idempotencyKey, correlationId);
+        List<Posting> postings = new ArrayList<>();
+        for (PostingLine line : lines) {
+            postings.add(Posting.of(entry, line.account(), line.amount()));
+        }
+        // unmodifiable, so no unchecked posting can be added after the balance check
+        return new PostedEntry(entry, List.copyOf(postings));
+    }
 }
