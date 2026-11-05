@@ -1,14 +1,13 @@
 package com.dev.bank.ledger;
 
+import com.dev.bank.money.Money;
 import jakarta.persistence.*;
-import lombok.NonNull;
 import org.springframework.data.domain.Persistable;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(name = "journal_entry")
@@ -112,6 +111,25 @@ public class JournalEntry implements Persistable<UUID> {
         return new JournalEntry(id, JournalEntryType.REVERSAL, JournalEntryStatus.POSTED, Instant.now().truncatedTo(ChronoUnit.MICROS), businessDate, createdBy, originalJournalEntry.getValueDate(),idempotencyKey , correlationId, originalJournalEntry.getId());
 
     }
+
+    public static void requireBalanced(List<Money> amounts) {
+        if(amounts.size()<2){
+            throw new UnbalancedJournalEntryException("A journal entry needs at least 2 postings, got " + amounts.size());
+        }
+
+        Map<String, Money> sumsMap = new HashMap<>();
+        for (Money m: amounts){
+            sumsMap.merge(m.currency(),m, Money::plus);
+        }
+
+        sumsMap.forEach((currency, total) -> {
+            if (total.amountMinor() != 0) {
+                throw new UnbalancedJournalEntryException(currency + " postings sum to " + total.amountMinor() + ", expected 0");
+            }
+        });
+        
+    }
+
 
 
 
