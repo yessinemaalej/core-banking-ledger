@@ -57,6 +57,16 @@ public class AccountBalance implements Persistable<UUID> {
         return new AccountBalance(accountId, 0, 0, Instant.now().truncatedTo(ChronoUnit.MICROS));
     }
 
+    /**
+     * Applies one posting's signed amount. Call only on a balance loaded with a lock
+     * ({@link AccountBalanceRepository#findForUpdateById}), or concurrent postings can overwrite each other.
+     * The change is written by dirty checking at commit; no save() needed.
+     */
+    public void apply(long amountMinor) {
+        this.balanceMinor = Math.addExact(balanceMinor, amountMinor);
+        this.updatedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
+    }
+
     @Override
     public UUID getId() {
         return accountId;
