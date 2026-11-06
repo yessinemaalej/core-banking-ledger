@@ -1,8 +1,11 @@
 package com.dev.bank.ledger;
 
 import com.dev.bank.account.Account;
+import com.dev.bank.account.AccountNotPostableException;
+import com.dev.bank.account.AccountStatus;
 import com.dev.bank.money.Money;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -156,6 +159,18 @@ class JournalEntryTest {
         assertThatThrownBy(() -> new PostingLine(null, eur(1050))).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new PostingLine(Account.createInternal("EUR", "1000"), null))
                 .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void postRefusesDebitFromAClosedAccount() {
+        // proves Posting.of enforces the status rule: post(...) can't be used to bypass it
+        Account closed = Account.createInternal("EUR", "1000");
+        ReflectionTestUtils.setField(closed, "accountStatus", AccountStatus.CLOSED);
+        Account deposits = Account.createInternal("EUR", "2000");
+
+        assertThatThrownBy(() -> JournalEntry.post(TODAY, TODAY, "alice", null, null, List.of(
+                new PostingLine(closed, eur(1050)), new PostingLine(deposits, eur(-1050)))))
+                .isInstanceOf(AccountNotPostableException.class);
     }
 
     private static Money eur(long amountMinor) {

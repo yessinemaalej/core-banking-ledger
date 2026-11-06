@@ -1,4 +1,5 @@
 package com.dev.bank.account;
+import com.dev.bank.money.Money;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -95,5 +96,16 @@ public class Account implements Persistable<UUID>{
 
     }
 
-
+    public void requireCanPost(Money amount){
+        switch(accountStatus) {
+            case OPEN -> { }  // debits and credits allowed
+            case FROZEN, CLOSED ->
+                    throw new AccountNotPostableException("Account " + id + " is " + accountStatus + ": no postings allowed");
+            case DEBIT_FROZEN -> {
+                if (amount.amountMinor() > 0) {
+                    throw new AccountNotPostableException("Account " + id + " is " + accountStatus + ": debits are not allowed");
+                }
+            }
+        }
+    }
 }

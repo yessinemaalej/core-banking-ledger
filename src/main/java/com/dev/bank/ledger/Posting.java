@@ -79,6 +79,7 @@ public class Posting  implements Persistable<UUID> {
         if(amount.amountMinor() ==0){
             throw new IllegalArgumentException("A posting must move money: amount cannot be zero");
         }
+        account.requireCanPost(amount);
         UUID id = UUID.randomUUID();
         return new Posting(id,journalEntry.getId(), account.getId(), amount.currency(), amount.amountMinor(), journalEntry.getValueDate(), Instant.now().truncatedTo(ChronoUnit.MICROS));
     }
